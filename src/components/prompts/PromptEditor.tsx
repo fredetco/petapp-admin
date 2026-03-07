@@ -3,10 +3,11 @@ import Editor, { type OnMount } from '@monaco-editor/react';
 import type { AIPrompt } from '../../types/prompt';
 import { VariableToolbar } from './VariableToolbar';
 import { VersionHistory } from './VersionHistory';
+import { PromptTester } from './PromptTester';
 import { Button } from '../shared/Button';
 import { Badge } from '../shared/Badge';
 import { useSavePrompt, useActivatePrompt, useArchivePrompt, usePromptsByKey } from '../../hooks/usePrompts';
-import { Save, Zap, Archive } from 'lucide-react';
+import { Save, Zap, Archive, FlaskConical } from 'lucide-react';
 
 interface PromptEditorProps {
   prompt: AIPrompt;
@@ -24,6 +25,7 @@ export function PromptEditor({ prompt, onUpdated }: PromptEditorProps) {
   const [title, setTitle] = useState(prompt.title);
   const [description, setDescription] = useState(prompt.description ?? '');
   const [dirty, setDirty] = useState(false);
+  const [showTester, setShowTester] = useState(false);
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
 
   const { data: versions = [] } = usePromptsByKey(prompt.prompt_key);
@@ -174,10 +176,26 @@ export function PromptEditor({ prompt, onUpdated }: PromptEditorProps) {
           </Button>
         )}
 
+        <Button
+          variant="secondary"
+          size="sm"
+          icon={<FlaskConical size={14} />}
+          onClick={() => setShowTester(!showTester)}
+        >
+          {showTester ? 'Hide Tester' : 'Test Prompt'}
+        </Button>
+
         {dirty && (
           <span className="text-xs text-admin-accent-500 ml-auto">Unsaved changes</span>
         )}
       </div>
+
+      {/* Tester panel */}
+      {showTester && (
+        <div className="px-6 py-4 border-t border-admin-border bg-white overflow-y-auto max-h-96">
+          <PromptTester systemPrompt={editorContent} />
+        </div>
+      )}
 
       {/* Version history in a sidebar panel */}
       <div className="px-6 pb-4 bg-white max-h-48 overflow-y-auto">
