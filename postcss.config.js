@@ -1,5 +1,10 @@
 import { createRequire } from 'module';
 import { existsSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Use local deps path if available (Google Drive workaround), otherwise standard resolution
 const depsPath = 'C:/dev/petapp-admin-deps/package.json';
@@ -12,7 +17,7 @@ const autoprefixer = req('autoprefixer');
 
 export default {
   plugins: [
-    tailwindcss,
+    tailwindcss({ config: resolve(__dirname, 'tailwind.config.js') }),
     autoprefixer,
   ],
 };
