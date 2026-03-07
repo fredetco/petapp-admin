@@ -1,4 +1,7 @@
 import { AdminHeader } from '../layout/AdminHeader';
+import { StatCards } from './StatCards';
+import { SpeciesChart } from './SpeciesChart';
+import { AuditLogTable } from './AuditLogTable';
 
 export function DashboardPage() {
   return (
@@ -7,8 +10,12 @@ export function DashboardPage() {
         title="Overview"
         description="Platform health and activity"
       />
-      <div className="p-8">
-        <p className="text-neutral-500">Dashboard analytics coming in Step 36.</p>
+      <div className="p-8 space-y-6 max-w-6xl">
+        <StatCards />
+        <div className="grid grid-cols-2 gap-6">
+          <SpeciesChart />
+          <AuditLogTable />
+        </div>
       </div>
     </div>
   );
