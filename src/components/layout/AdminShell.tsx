@@ -1,13 +1,29 @@
 import { Outlet } from 'react-router-dom';
+import { SidebarLayout } from '../catalyst/sidebar-layout';
 import { Sidebar } from './Sidebar';
+import { Navbar, NavbarSpacer, NavbarItem } from '../catalyst/navbar';
+import { useAdminAuth } from '../../context/AdminAuthContext';
+import { Avatar } from '../catalyst/avatar';
 
 export function AdminShell() {
+  const { adminUser } = useAdminAuth();
+
   return (
-    <div className="flex min-h-screen bg-admin-bg">
-      <Sidebar />
-      <main className="flex-1 min-w-0">
-        <Outlet />
-      </main>
-    </div>
+    <SidebarLayout
+      navbar={
+        <Navbar>
+          <NavbarSpacer />
+          <NavbarItem href="/settings">
+            <Avatar
+              initials={adminUser?.name?.charAt(0) || 'A'}
+              className="size-8 bg-primary-100 text-primary-700"
+            />
+          </NavbarItem>
+        </Navbar>
+      }
+      sidebar={<Sidebar />}
+    >
+      <Outlet />
+    </SidebarLayout>
   );
 }

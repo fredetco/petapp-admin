@@ -1,13 +1,14 @@
 import type { ReactNode } from 'react';
+import { Badge as CatalystBadge } from '../catalyst/badge';
 
 type BadgeVariant = 'default' | 'success' | 'warning' | 'danger' | 'info';
 
-const variantStyles: Record<BadgeVariant, string> = {
-  default: 'bg-neutral-100 text-neutral-600',
-  success: 'bg-green-100 text-green-700',
-  warning: 'bg-amber-100 text-amber-700',
-  danger: 'bg-red-100 text-red-700',
-  info: 'bg-blue-100 text-blue-700',
+const variantToColor: Record<BadgeVariant, 'zinc' | 'green' | 'amber' | 'red' | 'blue'> = {
+  default: 'zinc',
+  success: 'green',
+  warning: 'amber',
+  danger: 'red',
+  info: 'blue',
 };
 
 interface BadgeProps {
@@ -16,10 +17,10 @@ interface BadgeProps {
   className?: string;
 }
 
-export function Badge({ variant = 'default', children, className = '' }: BadgeProps) {
+export function Badge({ variant = 'default', children, className }: BadgeProps) {
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full ${variantStyles[variant]} ${className}`}>
+    <CatalystBadge color={variantToColor[variant]} className={className}>
       {children}
-    </span>
+    </CatalystBadge>
   );
 }
