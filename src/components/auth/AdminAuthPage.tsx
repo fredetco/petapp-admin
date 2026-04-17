@@ -50,7 +50,7 @@ export function AdminAuthPage() {
             <Shield size={32} className="text-admin-accent-500" />
           </div>
           <h1 className="text-2xl font-extrabold text-neutral-800">
-            PetApp Admin
+            MyZoo Admin
           </h1>
           <p className="text-neutral-500 text-sm mt-1">
             Platform administration dashboard
