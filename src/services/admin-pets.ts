@@ -4,6 +4,7 @@
  * RLS policy used by analytics.ts.
  */
 import { supabase } from './supabase';
+import { withTimeout, ADMIN_QUERY_TIMEOUT_MS } from '../utils/withTimeout';
 
 export interface AdminPetRow {
   id: string;
@@ -45,15 +46,20 @@ export async function fetchAllPets(filters: AdminPetFilters = {}): Promise<Admin
     q = q.or(`name.ilike.${term},passport_id.ilike.${term}`);
   }
 
-  const { data: pets, error } = await q;
+  const { data: pets, error } = await withTimeout(
+    q,
+    ADMIN_QUERY_TIMEOUT_MS,
+    'Loading pets'
+  );
   if (error) throw error;
   if (!pets || pets.length === 0) return [];
 
   const ownerIds = Array.from(new Set(pets.map((p) => p.owner_id)));
-  const { data: owners, error: ownErr } = await supabase
-    .from('profiles')
-    .select('id, name')
-    .in('id', ownerIds);
+  const { data: owners, error: ownErr } = await withTimeout(
+    supabase.from('profiles').select('id, name').in('id', ownerIds),
+    ADMIN_QUERY_TIMEOUT_MS,
+    'Resolving owners'
+  );
   if (ownErr) throw ownErr;
 
   const ownerNameById = new Map<string, string | null>();
@@ -75,7 +81,11 @@ export async function fetchAllPets(filters: AdminPetFilters = {}): Promise<Admin
 
 /** Distinct species list for the filter dropdown. */
 export async function fetchPetSpeciesList(): Promise<string[]> {
-  const { data, error } = await supabase.from('pets').select('species');
+  const { data, error } = await withTimeout(
+    supabase.from('pets').select('species'),
+    ADMIN_QUERY_TIMEOUT_MS,
+    'Loading species filter'
+  );
   if (error) throw error;
   const set = new Set<string>();
   for (const p of data ?? []) if (p.species) set.add(p.species);

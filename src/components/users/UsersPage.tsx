@@ -1,10 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Search, CheckCircle2, Circle } from 'lucide-react';
+import { Users, Search, CheckCircle2, Circle, RefreshCw } from 'lucide-react';
 import { AdminHeader } from '../layout/AdminHeader';
 import { useAllUsers } from '../../hooks/useUsers';
 import { LoadingSpinner } from '../shared/LoadingSpinner';
 import { EmptyState } from '../shared/EmptyState';
+import { Button } from '../shared/Button';
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, {
@@ -12,9 +13,38 @@ function formatDate(iso: string): string {
   });
 }
 
+/**
+ * Loading state that escalates to a Retry button after 8 seconds.
+ * If the query truly hangs (no error, no resolve), the user can
+ * recover without refreshing the page.
+ */
+function LoadingWithRetry({ onRetry }: { onRetry: () => void }) {
+  const [tookTooLong, setTookTooLong] = useState(false);
+  useEffect(() => {
+    const id = setTimeout(() => setTookTooLong(true), 8000);
+    return () => clearTimeout(id);
+  }, []);
+  return (
+    <div className="flex flex-col items-center justify-center py-16 gap-3">
+      <LoadingSpinner size="lg" />
+      {tookTooLong && (
+        <>
+          <p className="text-sm text-neutral-500">Taking longer than usual…</p>
+          <button
+            onClick={onRetry}
+            className="inline-flex items-center gap-1.5 text-sm text-primary-600 hover:underline font-semibold"
+          >
+            <RefreshCw size={14} /> Retry
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function UsersPage() {
   const navigate = useNavigate();
-  const { data: users = [], isLoading, error } = useAllUsers();
+  const { data: users = [], isLoading, error, refetch, isFetching } = useAllUsers();
   const [search, setSearch] = useState('');
 
   const filtered = useMemo(() => {
@@ -46,10 +76,16 @@ export function UsersPage() {
         </div>
 
         {isLoading ? (
-          <div className="flex justify-center py-16"><LoadingSpinner size="lg" /></div>
+          <LoadingWithRetry onRetry={() => refetch()} />
         ) : error ? (
-          <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 text-sm">
-            Failed to load users: {(error as Error).message}
+          <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 text-sm flex items-start gap-3">
+            <div className="flex-1">
+              <p className="font-semibold">Failed to load users</p>
+              <p className="text-xs mt-0.5 text-red-600">{(error as Error).message}</p>
+            </div>
+            <Button size="sm" variant="secondary" onClick={() => refetch()} loading={isFetching} icon={<RefreshCw size={14} />}>
+              Retry
+            </Button>
           </div>
         ) : filtered.length === 0 ? (
           <EmptyState

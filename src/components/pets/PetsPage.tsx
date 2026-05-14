@@ -1,17 +1,46 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { PawPrint, Search, X, Filter } from 'lucide-react';
+import { PawPrint, Search, X, Filter, RefreshCw } from 'lucide-react';
 import { AdminHeader } from '../layout/AdminHeader';
 import { useAdminPets, usePetSpeciesList } from '../../hooks/useAdminPets';
 import { useUserDetail } from '../../hooks/useUsers';
 import { LoadingSpinner } from '../shared/LoadingSpinner';
 import { EmptyState } from '../shared/EmptyState';
+import { Button } from '../shared/Button';
 
 const sexBadge: Record<string, string> = {
   male: 'bg-blue-50 text-blue-700',
   female: 'bg-pink-50 text-pink-700',
   unknown: 'bg-neutral-100 text-neutral-500',
 };
+
+/**
+ * Escalates to a Retry button after 8s so a hung query doesn't trap
+ * the user with an infinite spinner.
+ */
+function LoadingWithRetry({ onRetry }: { onRetry: () => void }) {
+  const [tookTooLong, setTookTooLong] = useState(false);
+  useEffect(() => {
+    const id = setTimeout(() => setTookTooLong(true), 8000);
+    return () => clearTimeout(id);
+  }, []);
+  return (
+    <div className="flex flex-col items-center justify-center py-16 gap-3">
+      <LoadingSpinner size="lg" />
+      {tookTooLong && (
+        <>
+          <p className="text-sm text-neutral-500">Taking longer than usual…</p>
+          <button
+            onClick={onRetry}
+            className="inline-flex items-center gap-1.5 text-sm text-primary-600 hover:underline font-semibold"
+          >
+            <RefreshCw size={14} /> Retry
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
 
 export function PetsPage() {
   const navigate = useNavigate();
@@ -39,7 +68,7 @@ export function PetsPage() {
     [speciesParam, ownerParam, debouncedSearch]
   );
 
-  const { data: pets = [], isLoading, error } = useAdminPets(filters);
+  const { data: pets = [], isLoading, error, refetch, isFetching } = useAdminPets(filters);
   const { data: speciesOptions = [] } = usePetSpeciesList();
   const { data: ownerProfile } = useUserDetail(ownerParam || undefined);
 
@@ -128,10 +157,16 @@ export function PetsPage() {
         )}
 
         {isLoading ? (
-          <div className="flex justify-center py-16"><LoadingSpinner size="lg" /></div>
+          <LoadingWithRetry onRetry={() => refetch()} />
         ) : error ? (
-          <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 text-sm">
-            Failed to load pets: {(error as Error).message}
+          <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 text-sm flex items-start gap-3">
+            <div className="flex-1">
+              <p className="font-semibold">Failed to load pets</p>
+              <p className="text-xs mt-0.5 text-red-600">{(error as Error).message}</p>
+            </div>
+            <Button size="sm" variant="secondary" onClick={() => refetch()} loading={isFetching} icon={<RefreshCw size={14} />}>
+              Retry
+            </Button>
           </div>
         ) : pets.length === 0 ? (
           <EmptyState

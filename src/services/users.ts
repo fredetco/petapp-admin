@@ -8,6 +8,7 @@
  * leave email out until we add a SECURITY DEFINER RPC.
  */
 import { supabase } from './supabase';
+import { withTimeout, ADMIN_QUERY_TIMEOUT_MS } from '../utils/withTimeout';
 
 export interface UserListEntry {
   id: string;
@@ -51,18 +52,24 @@ export interface UserPetSummary {
  * count-via-relationship query.
  */
 export async function fetchAllUsers(): Promise<UserListEntry[]> {
-  const { data: profiles, error } = await supabase
-    .from('profiles')
-    .select('id, name, language, timezone, onboarding_complete, created_at')
-    .order('created_at', { ascending: false });
+  const { data: profiles, error } = await withTimeout(
+    supabase
+      .from('profiles')
+      .select('id, name, language, timezone, onboarding_complete, created_at')
+      .order('created_at', { ascending: false }),
+    ADMIN_QUERY_TIMEOUT_MS,
+    'Loading users'
+  );
   if (error) throw error;
 
   // Bulk pet count: SELECT owner_id, then count client-side. The
   // alternative (.select('id, pets(count)')) needs a relationship FK
   // hint and is finicky.
-  const { data: pets, error: petsErr } = await supabase
-    .from('pets')
-    .select('owner_id');
+  const { data: pets, error: petsErr } = await withTimeout(
+    supabase.from('pets').select('owner_id'),
+    ADMIN_QUERY_TIMEOUT_MS,
+    'Counting pets per user'
+  );
   if (petsErr) throw petsErr;
 
   const petCountByOwner = new Map<string, number>();
@@ -89,23 +96,27 @@ export async function fetchAllUsers(): Promise<UserListEntry[]> {
 }
 
 export async function fetchUserDetail(userId: string): Promise<UserDetail | null> {
-  const { data: profile, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', userId)
-    .single();
+  const { data: profile, error } = await withTimeout(
+    supabase.from('profiles').select('*').eq('id', userId).single(),
+    ADMIN_QUERY_TIMEOUT_MS,
+    'Loading user profile'
+  );
   if (error) {
     if (error.code === 'PGRST116') return null;
     throw error;
   }
 
   // Parallel count queries — head: true means we get only the count.
-  const [petCount, taskCount, careLogCount, carePlanCount] = await Promise.all([
-    supabase.from('pets').select('id', { count: 'exact', head: true }).eq('owner_id', userId),
-    supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('owner_id', userId),
-    supabase.from('care_log_entries').select('id', { count: 'exact', head: true }).eq('owner_id', userId),
-    supabase.from('care_plans').select('id', { count: 'exact', head: true }).eq('owner_id', userId),
-  ]);
+  const [petCount, taskCount, careLogCount, carePlanCount] = await withTimeout(
+    Promise.all([
+      supabase.from('pets').select('id', { count: 'exact', head: true }).eq('owner_id', userId),
+      supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('owner_id', userId),
+      supabase.from('care_log_entries').select('id', { count: 'exact', head: true }).eq('owner_id', userId),
+      supabase.from('care_plans').select('id', { count: 'exact', head: true }).eq('owner_id', userId),
+    ]),
+    ADMIN_QUERY_TIMEOUT_MS,
+    'Loading activity counts'
+  );
 
   return {
     id: profile.id,
@@ -126,11 +137,15 @@ export async function fetchUserDetail(userId: string): Promise<UserDetail | null
 }
 
 export async function fetchPetsForUser(userId: string): Promise<UserPetSummary[]> {
-  const { data, error } = await supabase
-    .from('pets')
-    .select('id, name, species, breed, photo_url, created_at')
-    .eq('owner_id', userId)
-    .order('created_at', { ascending: true });
+  const { data, error } = await withTimeout(
+    supabase
+      .from('pets')
+      .select('id, name, species, breed, photo_url, created_at')
+      .eq('owner_id', userId)
+      .order('created_at', { ascending: true }),
+    ADMIN_QUERY_TIMEOUT_MS,
+    "Loading user's pets"
+  );
   if (error) throw error;
 
   return (data ?? []).map((p: {
