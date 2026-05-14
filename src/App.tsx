@@ -9,6 +9,9 @@ import { DashboardPage } from './components/dashboard/DashboardPage';
 import { PromptsPage } from './components/prompts/PromptsPage';
 import { TemplatesPage } from './components/templates/TemplatesPage';
 import { SettingsPage } from './components/settings/SettingsPage';
+import { UsersPage } from './components/users/UsersPage';
+import { UserDetailPage } from './components/users/UserDetailPage';
+import { PetsPage } from './components/pets/PetsPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -36,6 +39,9 @@ export function App() {
               </AdminProtectedRoute>
             }>
               <Route path="/" element={<DashboardPage />} />
+              <Route path="/users" element={<UsersPage />} />
+              <Route path="/users/:id" element={<UserDetailPage />} />
+              <Route path="/pets" element={<PetsPage />} />
               <Route path="/prompts" element={<PromptsPage />} />
               <Route path="/templates" element={<TemplatesPage />} />
               <Route path="/settings" element={<SettingsPage />} />

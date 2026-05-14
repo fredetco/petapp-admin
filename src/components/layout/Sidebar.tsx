@@ -5,7 +5,8 @@ import {
   FileStack,
   Settings,
   LogOut,
-  Shield,
+  Users,
+  PawPrint,
 } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import {
@@ -22,6 +23,8 @@ import { Avatar } from '../catalyst/avatar';
 
 const navItems = [
   { to: '/',          icon: LayoutDashboard, label: 'Overview' },
+  { to: '/users',     icon: Users,           label: 'Users' },
+  { to: '/pets',      icon: PawPrint,        label: 'Pets' },
   { to: '/prompts',   icon: Brain,           label: 'AI Prompts' },
   { to: '/templates', icon: FileStack,       label: 'Templates' },
 ];
