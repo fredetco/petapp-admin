@@ -43,13 +43,30 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await loadAdminData(session.user.id);
-      }
+    // Belt-and-suspenders: even if fetchAdminUser's own timeout
+    // failed to fire (long-tail bug) or supabase.auth.getSession()
+    // itself hangs, force the spinner off after 12s so the user
+    // lands on /auth and can recover by signing in again — no
+    // more "delete site data" required.
+    const safetyTimer = setTimeout(() => {
+      console.warn('[AdminAuth] Bootstrap exceeded 12s — forcing loading=false');
       setLoading(false);
-    });
+    }, 12000);
+
+    supabase.auth.getSession()
+      .then(async ({ data: { session } }) => {
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          await loadAdminData(session.user.id);
+        }
+      })
+      .catch((err) => {
+        console.error('[AdminAuth] getSession failed:', err);
+      })
+      .finally(() => {
+        setLoading(false);
+        clearTimeout(safetyTimer);
+      });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
@@ -63,7 +80,10 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
       },
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(safetyTimer);
+      subscription.unsubscribe();
+    };
   }, [loadAdminData]);
 
   const value: AdminAuthContextType = {
