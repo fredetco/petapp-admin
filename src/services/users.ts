@@ -18,6 +18,8 @@ export interface UserListEntry {
   onboardingComplete: boolean;
   createdAt: string;
   petCount: number;
+  suspendedAt: string | null;
+  deletedAt: string | null;
 }
 
 export interface UserDetail {
@@ -35,6 +37,8 @@ export interface UserDetail {
   taskCount: number;
   careLogCount: number;
   carePlanCount: number;
+  suspendedAt: string | null;
+  deletedAt: string | null;
 }
 
 export interface UserPetSummary {
@@ -51,15 +55,13 @@ export interface UserPetSummary {
  * owner. Avoids per-row roundtrips and the awkwardness of a
  * count-via-relationship query.
  */
-export async function fetchAllUsers(): Promise<UserListEntry[]> {
-  const { data: profiles, error } = await withTimeout(
-    supabase
-      .from('profiles')
-      .select('id, name, language, timezone, onboarding_complete, created_at')
-      .order('created_at', { ascending: false }),
-    ADMIN_QUERY_TIMEOUT_MS,
-    'Loading users'
-  );
+export async function fetchAllUsers(opts: { includeDeleted?: boolean } = {}): Promise<UserListEntry[]> {
+  let q = supabase
+    .from('profiles')
+    .select('id, name, language, timezone, onboarding_complete, created_at, suspended_at, deleted_at')
+    .order('created_at', { ascending: false });
+  if (!opts.includeDeleted) q = q.is('deleted_at', null);
+  const { data: profiles, error } = await withTimeout(q, ADMIN_QUERY_TIMEOUT_MS, 'Loading users');
   if (error) throw error;
 
   // Bulk pet count: SELECT owner_id, then count client-side. The
@@ -84,6 +86,8 @@ export async function fetchAllUsers(): Promise<UserListEntry[]> {
     timezone: string | null;
     onboarding_complete: boolean | null;
     created_at: string;
+    suspended_at: string | null;
+    deleted_at: string | null;
   }) => ({
     id: p.id,
     name: p.name,
@@ -92,6 +96,8 @@ export async function fetchAllUsers(): Promise<UserListEntry[]> {
     onboardingComplete: p.onboarding_complete ?? false,
     createdAt: p.created_at,
     petCount: petCountByOwner.get(p.id) ?? 0,
+    suspendedAt: p.suspended_at,
+    deletedAt: p.deleted_at,
   }));
 }
 
@@ -133,7 +139,79 @@ export async function fetchUserDetail(userId: string): Promise<UserDetail | null
     taskCount: taskCount.count ?? 0,
     careLogCount: careLogCount.count ?? 0,
     carePlanCount: carePlanCount.count ?? 0,
+    suspendedAt: profile.suspended_at ?? null,
+    deletedAt: profile.deleted_at ?? null,
   };
+}
+
+// ─── Mutations ───────────────────────────────────────────────
+
+export interface UserEditPayload {
+  name: string | null;
+  language: string;
+  reminderFrequency: string;
+  timezone: string;
+  notificationsEnabled: boolean;
+}
+
+export async function updateUserProfile(userId: string, p: UserEditPayload): Promise<void> {
+  const { error } = await withTimeout(
+    supabase
+      .from('profiles')
+      .update({
+        name: p.name,
+        language: p.language,
+        reminder_frequency: p.reminderFrequency,
+        timezone: p.timezone,
+        notifications_enabled: p.notificationsEnabled,
+      })
+      .eq('id', userId),
+    ADMIN_QUERY_TIMEOUT_MS,
+    'Saving user'
+  );
+  if (error) throw error;
+}
+
+export async function setUserSuspended(userId: string, suspended: boolean): Promise<void> {
+  const { error } = await withTimeout(
+    supabase
+      .from('profiles')
+      .update({ suspended_at: suspended ? new Date().toISOString() : null })
+      .eq('id', userId),
+    ADMIN_QUERY_TIMEOUT_MS,
+    suspended ? 'Suspending user' : 'Unsuspending user'
+  );
+  if (error) throw error;
+}
+
+export async function softDeleteUser(userId: string): Promise<void> {
+  // Soft delete — sets deleted_at. Auth row remains; the user-app
+  // side will need to enforce "deleted profile = forced sign-out"
+  // when that's added.
+  const { error } = await withTimeout(
+    supabase
+      .from('profiles')
+      .update({
+        deleted_at: new Date().toISOString(),
+        suspended_at: new Date().toISOString(), // implicit suspend
+      })
+      .eq('id', userId),
+    ADMIN_QUERY_TIMEOUT_MS,
+    'Deleting user'
+  );
+  if (error) throw error;
+}
+
+export async function restoreUser(userId: string): Promise<void> {
+  const { error } = await withTimeout(
+    supabase
+      .from('profiles')
+      .update({ deleted_at: null, suspended_at: null })
+      .eq('id', userId),
+    ADMIN_QUERY_TIMEOUT_MS,
+    'Restoring user'
+  );
+  if (error) throw error;
 }
 
 export async function fetchPetsForUser(userId: string): Promise<UserPetSummary[]> {

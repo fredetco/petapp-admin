@@ -17,12 +17,14 @@ export interface AdminPetRow {
   ownerId: string;
   ownerName: string | null;
   createdAt: string;
+  deletedAt: string | null;
 }
 
 export interface AdminPetFilters {
   species?: string;
   ownerId?: string;
   search?: string;
+  includeDeleted?: boolean;
 }
 
 /**
@@ -34,9 +36,10 @@ export interface AdminPetFilters {
 export async function fetchAllPets(filters: AdminPetFilters = {}): Promise<AdminPetRow[]> {
   let q = supabase
     .from('pets')
-    .select('id, name, species, breed, sex, photo_url, passport_id, owner_id, created_at')
+    .select('id, name, species, breed, sex, photo_url, passport_id, owner_id, created_at, deleted_at')
     .order('created_at', { ascending: false });
 
+  if (!filters.includeDeleted) q = q.is('deleted_at', null);
   if (filters.species) q = q.eq('species', filters.species);
   if (filters.ownerId) q = q.eq('owner_id', filters.ownerId);
   if (filters.search) {
@@ -76,7 +79,60 @@ export async function fetchAllPets(filters: AdminPetFilters = {}): Promise<Admin
     ownerId: p.owner_id,
     ownerName: ownerNameById.get(p.owner_id) ?? null,
     createdAt: p.created_at,
+    deletedAt: p.deleted_at ?? null,
   }));
+}
+
+// ─── Mutations ───────────────────────────────────────────────
+
+export interface PetEditPayload {
+  name: string;
+  species: string;
+  breed: string;
+  sex: string;
+  color: string | null;
+  microchipId: string | null;
+  isNeutered: boolean | null;
+  dateOfBirth: string | null;
+}
+
+export async function updatePet(petId: string, p: PetEditPayload): Promise<void> {
+  const { error } = await withTimeout(
+    supabase
+      .from('pets')
+      .update({
+        name: p.name,
+        species: p.species,
+        breed: p.breed,
+        sex: p.sex,
+        color: p.color,
+        microchip_id: p.microchipId,
+        is_neutered: p.isNeutered,
+        date_of_birth: p.dateOfBirth,
+      })
+      .eq('id', petId),
+    ADMIN_QUERY_TIMEOUT_MS,
+    'Saving pet'
+  );
+  if (error) throw error;
+}
+
+export async function softDeletePet(petId: string): Promise<void> {
+  const { error } = await withTimeout(
+    supabase.from('pets').update({ deleted_at: new Date().toISOString() }).eq('id', petId),
+    ADMIN_QUERY_TIMEOUT_MS,
+    'Deleting pet'
+  );
+  if (error) throw error;
+}
+
+export async function restorePet(petId: string): Promise<void> {
+  const { error } = await withTimeout(
+    supabase.from('pets').update({ deleted_at: null }).eq('id', petId),
+    ADMIN_QUERY_TIMEOUT_MS,
+    'Restoring pet'
+  );
+  if (error) throw error;
 }
 
 /** Distinct species list for the filter dropdown. */

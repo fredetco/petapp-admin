@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchAllUsers, fetchUserDetail, fetchPetsForUser } from '../services/users';
 
-export function useAllUsers() {
+export function useAllUsers(opts: { includeDeleted?: boolean } = {}) {
   return useQuery({
-    queryKey: ['admin-users'],
-    queryFn: fetchAllUsers,
+    queryKey: ['admin-users', opts.includeDeleted ?? false],
+    queryFn: () => fetchAllUsers(opts),
   });
 }
 
