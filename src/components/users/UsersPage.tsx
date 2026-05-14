@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Users, Search, CheckCircle2, Circle, RefreshCw, Pencil, Ban, Trash2, RotateCcw,
+  Users, Search, CheckCircle2, Circle, RefreshCw, Pencil, Ban, Trash2, RotateCcw, Coins,
 } from 'lucide-react';
 import { AdminHeader } from '../layout/AdminHeader';
 import { useAllUsers } from '../../hooks/useUsers';
@@ -112,6 +112,11 @@ export function UsersPage() {
                   <th className="text-left px-4 py-3 font-semibold">Name</th>
                   <th className="text-left px-4 py-3 font-semibold">Status</th>
                   <th className="text-left px-4 py-3 font-semibold">Pets</th>
+                  <th className="text-left px-4 py-3 font-semibold">
+                    <span className="inline-flex items-center gap-1" title="AI care plans used this month + any admin bonus grant">
+                      <Coins size={12} /> AI
+                    </span>
+                  </th>
                   <th className="text-left px-4 py-3 font-semibold">Language</th>
                   <th className="text-left px-4 py-3 font-semibold">Onboarded</th>
                   <th className="text-left px-4 py-3 font-semibold">Joined</th>
@@ -151,6 +156,23 @@ export function UsersPage() {
                         ) : (
                           <span className="text-neutral-400">0</span>
                         )}
+                      </td>
+                      <td className="px-4 py-3 text-neutral-700">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
+                            u.aiTokensUsedThisMonth === 0
+                              ? 'bg-neutral-50 text-neutral-400'
+                              : u.aiTokensUsedThisMonth >= 5
+                              ? 'bg-amber-50 text-amber-700'
+                              : 'bg-primary-50 text-primary-700'
+                          }`}
+                          title={`${u.aiTokensUsedThisMonth} care plans this month` + (u.bonusAiTokens > 0 ? ` · +${u.bonusAiTokens} bonus per pet` : '')}
+                        >
+                          {u.aiTokensUsedThisMonth}
+                          {u.bonusAiTokens > 0 && (
+                            <span className="ml-1 text-[10px] text-primary-600 font-bold">+{u.bonusAiTokens}</span>
+                          )}
+                        </span>
                       </td>
                       <td className="px-4 py-3 text-neutral-600 uppercase text-xs">{u.language}</td>
                       <td className="px-4 py-3">

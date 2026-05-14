@@ -21,6 +21,8 @@ export function AdminUserEditModal({ open, user, onClose }: Props) {
   const [reminderFrequency, setReminderFrequency] = useState('normal');
   const [timezone, setTimezone] = useState('America/Toronto');
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [bonusAiTokens, setBonusAiTokens] = useState(0);
+  const [bonusChatMessages, setBonusChatMessages] = useState(0);
 
   // Hydrate when opening. We re-read on every open so the modal
   // reflects the latest list data even if the user was edited
@@ -35,6 +37,8 @@ export function AdminUserEditModal({ open, user, onClose }: Props) {
     // re-fetching here is overkill — admin can always reopen for fresh.
     setReminderFrequency('normal');
     setNotificationsEnabled(false);
+    setBonusAiTokens(user.bonusAiTokens ?? 0);
+    setBonusChatMessages(user.bonusChatMessages ?? 0);
   }, [open, user]);
 
   const mutation = useMutation({
@@ -104,6 +108,34 @@ export function AdminUserEditModal({ open, user, onClose }: Props) {
             <span className="text-sm text-neutral-700">Notifications enabled</span>
           </label>
 
+          {/* ── Bonus AI tokens (admin grant) ─────────────────── */}
+          <div className="pt-3 border-t border-neutral-100">
+            <h3 className="text-sm font-bold text-neutral-700 mb-2">AI bonus grants</h3>
+            <p className="text-xs text-neutral-500 mb-3">
+              Stacked on top of the free monthly cap. Persist across months until consumed.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Bonus care plans (per pet)">
+                <input
+                  type="number"
+                  min={0}
+                  value={bonusAiTokens}
+                  onChange={(e) => setBonusAiTokens(Number(e.target.value) || 0)}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
+                />
+              </Field>
+              <Field label="Bonus chat messages">
+                <input
+                  type="number"
+                  min={0}
+                  value={bonusChatMessages}
+                  onChange={(e) => setBonusChatMessages(Number(e.target.value) || 0)}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
+                />
+              </Field>
+            </div>
+          </div>
+
           {mutation.isError && (
             <p className="text-sm text-red-600">
               {(mutation.error as Error)?.message ?? 'Could not save.'}
@@ -114,7 +146,15 @@ export function AdminUserEditModal({ open, user, onClose }: Props) {
       <DialogActions>
         <Button variant="ghost" onClick={onClose}>Cancel</Button>
         <Button
-          onClick={() => mutation.mutate({ name: name.trim() || null, language, reminderFrequency, timezone, notificationsEnabled })}
+          onClick={() => mutation.mutate({
+            name: name.trim() || null,
+            language,
+            reminderFrequency,
+            timezone,
+            notificationsEnabled,
+            bonusAiTokens,
+            bonusChatMessages,
+          })}
           loading={mutation.isPending}
         >
           Save

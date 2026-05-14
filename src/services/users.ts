@@ -20,6 +20,11 @@ export interface UserListEntry {
   petCount: number;
   suspendedAt: string | null;
   deletedAt: string | null;
+  // AI care plan tokens consumed across all this user's pets in
+  // the current calendar month. Useful for spotting heavy users.
+  aiTokensUsedThisMonth: number;
+  bonusAiTokens: number;
+  bonusChatMessages: number;
 }
 
 export interface UserDetail {
@@ -39,6 +44,8 @@ export interface UserDetail {
   carePlanCount: number;
   suspendedAt: string | null;
   deletedAt: string | null;
+  bonusAiTokens: number;
+  bonusChatMessages: number;
 }
 
 export interface UserPetSummary {
@@ -58,7 +65,7 @@ export interface UserPetSummary {
 export async function fetchAllUsers(opts: { includeDeleted?: boolean } = {}): Promise<UserListEntry[]> {
   let q = supabase
     .from('profiles')
-    .select('id, name, language, timezone, onboarding_complete, created_at, suspended_at, deleted_at')
+    .select('id, name, language, timezone, onboarding_complete, created_at, suspended_at, deleted_at, bonus_ai_tokens, bonus_chat_messages')
     .order('created_at', { ascending: false });
   if (!opts.includeDeleted) q = q.is('deleted_at', null);
   const { data: profiles, error } = await withTimeout(q, ADMIN_QUERY_TIMEOUT_MS, 'Loading users');
@@ -74,6 +81,30 @@ export async function fetchAllUsers(opts: { includeDeleted?: boolean } = {}): Pr
   );
   if (petsErr) throw petsErr;
 
+  // Bulk AI token usage for the current month. Admin RLS already
+  // grants read access. Tolerate missing table (pre-migration) by
+  // treating as zero usage everywhere.
+  const monthStart = currentMonthStartIso();
+  let tokensByOwner = new Map<string, number>();
+  try {
+    const { data: usage } = await withTimeout(
+      supabase
+        .from('ai_token_usage')
+        .select('owner_id, tokens_used')
+        .eq('period_start', monthStart),
+      ADMIN_QUERY_TIMEOUT_MS,
+      'Aggregating AI usage'
+    );
+    if (usage) {
+      tokensByOwner = new Map<string, number>();
+      for (const u of usage) {
+        tokensByOwner.set(u.owner_id, (tokensByOwner.get(u.owner_id) ?? 0) + (u.tokens_used ?? 0));
+      }
+    }
+  } catch {
+    // Table may not exist yet — leave map empty (everyone shows 0)
+  }
+
   const petCountByOwner = new Map<string, number>();
   for (const p of pets ?? []) {
     petCountByOwner.set(p.owner_id, (petCountByOwner.get(p.owner_id) ?? 0) + 1);
@@ -88,6 +119,8 @@ export async function fetchAllUsers(opts: { includeDeleted?: boolean } = {}): Pr
     created_at: string;
     suspended_at: string | null;
     deleted_at: string | null;
+    bonus_ai_tokens: number | null;
+    bonus_chat_messages: number | null;
   }) => ({
     id: p.id,
     name: p.name,
@@ -98,7 +131,16 @@ export async function fetchAllUsers(opts: { includeDeleted?: boolean } = {}): Pr
     petCount: petCountByOwner.get(p.id) ?? 0,
     suspendedAt: p.suspended_at,
     deletedAt: p.deleted_at,
+    aiTokensUsedThisMonth: tokensByOwner.get(p.id) ?? 0,
+    bonusAiTokens: p.bonus_ai_tokens ?? 0,
+    bonusChatMessages: p.bonus_chat_messages ?? 0,
   }));
+}
+
+/** First day of the current month as YYYY-MM-DD (matches DB period_start). */
+function currentMonthStartIso(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
 }
 
 export async function fetchUserDetail(userId: string): Promise<UserDetail | null> {
@@ -141,6 +183,8 @@ export async function fetchUserDetail(userId: string): Promise<UserDetail | null
     carePlanCount: carePlanCount.count ?? 0,
     suspendedAt: profile.suspended_at ?? null,
     deletedAt: profile.deleted_at ?? null,
+    bonusAiTokens: profile.bonus_ai_tokens ?? 0,
+    bonusChatMessages: profile.bonus_chat_messages ?? 0,
   };
 }
 
@@ -152,6 +196,8 @@ export interface UserEditPayload {
   reminderFrequency: string;
   timezone: string;
   notificationsEnabled: boolean;
+  bonusAiTokens: number;
+  bonusChatMessages: number;
 }
 
 export async function updateUserProfile(userId: string, p: UserEditPayload): Promise<void> {
@@ -164,6 +210,8 @@ export async function updateUserProfile(userId: string, p: UserEditPayload): Pro
         reminder_frequency: p.reminderFrequency,
         timezone: p.timezone,
         notifications_enabled: p.notificationsEnabled,
+        bonus_ai_tokens: Math.max(0, Math.floor(p.bonusAiTokens)),
+        bonus_chat_messages: Math.max(0, Math.floor(p.bonusChatMessages)),
       })
       .eq('id', userId),
     ADMIN_QUERY_TIMEOUT_MS,
