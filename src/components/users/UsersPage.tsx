@@ -247,7 +247,9 @@ function IconButton({
 function LoadingWithRetry({ onRetry }: { onRetry: () => void }) {
   const [tookTooLong, setTookTooLong] = useState(false);
   useEffect(() => {
-    const id = setTimeout(() => setTookTooLong(true), 8000);
+    // Escalates at 4s — earlier than the 8s timeout — so the user
+    // gets a clickable Retry while the query is still trying.
+    const id = setTimeout(() => setTookTooLong(true), 4000);
     return () => clearTimeout(id);
   }, []);
   return (

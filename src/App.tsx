@@ -17,7 +17,10 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 5 * 60 * 1000,
-      retry: 1,
+      // No automatic retry. With the 8s withTimeout, a failed query
+      // would otherwise spin for ~16s before showing the error. The
+      // pages render a Retry button so the user can manually re-run.
+      retry: 0,
     },
   },
 });

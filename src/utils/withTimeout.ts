@@ -34,6 +34,8 @@ export async function withTimeout<T>(
   }
 }
 
-/** Default timeout for admin queries. Long enough for slow Supabase
- *  cold starts, short enough that a stuck request surfaces fast. */
-export const ADMIN_QUERY_TIMEOUT_MS = 15_000;
+/** Default timeout for admin queries. 8s is short enough that a
+ *  stuck or schema-mismatch query surfaces in ~10s total (one
+ *  attempt; we set retry:0 in App.tsx for admin queries). Slower
+ *  than that and the user starts assuming it's hung. */
+export const ADMIN_QUERY_TIMEOUT_MS = 8_000;
