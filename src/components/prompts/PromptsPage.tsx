@@ -15,8 +15,11 @@ export function PromptsPage() {
   const [selected, setSelected] = useState<AIPrompt | null>(null);
   const [showNew, setShowNew] = useState(false);
 
-  // Auto-select first prompt if none selected
-  if (!selected && prompts.length > 0 && !isLoading) {
+  // Auto-select first prompt if none selected — only on desktop where
+  // both panes are visible at once. On mobile we want to start on the
+  // list so the user can pick.
+  const isDesktop = typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches;
+  if (isDesktop && !selected && prompts.length > 0 && !isLoading) {
     setSelected(prompts[0]);
   }
 
@@ -48,18 +51,36 @@ export function PromptsPage() {
         </div>
       ) : (
         <div className="flex-1 flex min-h-0">
-          <PromptList
-            prompts={prompts}
-            selectedId={selected?.id ?? null}
-            onSelect={setSelected}
-            onNew={() => setShowNew(true)}
-          />
-          {selected && (
-            <PromptEditor
-              key={selected.id}
-              prompt={selected}
-              onUpdated={() => refetch()}
+          {/* Mobile: show list OR editor, never both. The editor pane
+              already has a back button via its <PromptEditor>; here
+              we control visibility based on `selected` so the user
+              has a clear single-view stack. */}
+          <div className={`${selected ? 'hidden md:flex' : 'flex'} flex-1 md:flex-initial md:w-72`}>
+            <PromptList
+              prompts={prompts}
+              selectedId={selected?.id ?? null}
+              onSelect={setSelected}
+              onNew={() => setShowNew(true)}
             />
+          </div>
+          {selected && (
+            <div className="flex-1 flex min-h-0">
+              {/* Back arrow on mobile to return to the list */}
+              <button
+                onClick={() => setSelected(null)}
+                className="md:hidden absolute top-3 left-2 z-10 p-2 rounded-lg bg-white shadow-sm border border-neutral-200 text-neutral-600 hover:bg-neutral-50"
+                aria-label="Back to prompt list"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M10 12L6 8l4-4" />
+                </svg>
+              </button>
+              <PromptEditor
+                key={selected.id}
+                prompt={selected}
+                onUpdated={() => refetch()}
+              />
+            </div>
           )}
         </div>
       )}

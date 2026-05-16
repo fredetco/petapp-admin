@@ -80,7 +80,7 @@ export function PetsPage() {
         description={`${pets.length} pet${pets.length === 1 ? '' : 's'}${hasFilter ? ' matching filters' : ' total'}${showDeleted ? ' (incl. deleted)' : ''}`}
       />
 
-      <div className="p-8 space-y-4 max-w-7xl">
+      <div className="p-4 lg:p-8 space-y-4 max-w-7xl">
         {/* Filter bar */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative flex-1 min-w-[200px]">
@@ -172,7 +172,89 @@ export function PetsPage() {
             onAction={hasFilter ? clearAll : undefined}
           />
         ) : (
-          <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+          <>
+            {/* Mobile-friendly card grid */}
+            <div className="md:hidden space-y-2">
+              {pets.map((p) => {
+                const isDeleted = !!p.deletedAt;
+                return (
+                  <div key={p.id} className={`bg-white rounded-xl border border-neutral-200 p-4 ${isDeleted ? 'opacity-60' : ''}`}>
+                    {/* Top row: photo + name + sex badge */}
+                    <div className="flex items-start gap-3 mb-3">
+                      {p.photoUrl ? (
+                        <img src={p.photoUrl} alt={p.name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg bg-neutral-100 flex items-center justify-center text-neutral-400 flex-shrink-0">
+                          <PawPrint size={20} />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-semibold text-neutral-800 truncate">{p.name}</p>
+                          {isDeleted && (
+                            <span className="px-1.5 py-0.5 rounded-full bg-neutral-200 text-neutral-600 text-[10px] font-bold uppercase">Deleted</span>
+                          )}
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize ${sexBadge[p.sex] ?? sexBadge.unknown}`}>
+                            {p.sex}
+                          </span>
+                        </div>
+                        <p className="text-xs text-neutral-500 capitalize mt-0.5">
+                          {p.species}{p.breed ? ` · ${p.breed}` : ''}
+                        </p>
+                        <Link to={`/users/${p.ownerId}`} className="text-xs text-primary-700 hover:underline">
+                          {p.ownerName || <span className="text-neutral-400 italic">unnamed owner</span>}
+                        </Link>
+                      </div>
+                    </div>
+
+                    {/* Meta row */}
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-neutral-500 mb-2">
+                      <span className="font-mono">{p.passportId}</span>
+                      <span>Added {new Date(p.createdAt).toLocaleDateString()}</span>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center justify-end gap-1 pt-2 border-t border-neutral-100">
+                      {isDeleted ? (
+                        <IconButton
+                          title="Restore"
+                          onClick={() => restoreMutation.mutate(p.id)}
+                          loading={restoreMutation.isPending && restoreMutation.variables === p.id}
+                          icon={<RotateCcw size={16} />}
+                          color="text-primary-600 hover:bg-primary-50 active:bg-primary-100"
+                          large
+                        />
+                      ) : (
+                        <>
+                          <IconButton
+                            title="Edit"
+                            onClick={() => setEditTarget(p)}
+                            icon={<Pencil size={16} />}
+                            color="text-neutral-600 hover:bg-neutral-100 active:bg-neutral-200"
+                            large
+                          />
+                          <IconButton
+                            title="Delete"
+                            onClick={() => {
+                              if (window.confirm(`Delete ${p.name}? This is a soft delete — you can restore later.`)) {
+                                deleteMutation.mutate(p.id);
+                              }
+                            }}
+                            loading={deleteMutation.isPending && deleteMutation.variables === p.id}
+                            icon={<Trash2 size={16} />}
+                            color="text-red-600 hover:bg-red-50 active:bg-red-100"
+                            large
+                          />
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden md:block bg-white rounded-xl border border-neutral-200 overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-neutral-50 text-neutral-500 text-xs uppercase tracking-wide">
                 <tr>
@@ -263,7 +345,8 @@ export function PetsPage() {
                 })}
               </tbody>
             </table>
-          </div>
+            </div>
+          </>
         )}
       </div>
 
@@ -277,13 +360,15 @@ export function PetsPage() {
 }
 
 function IconButton({
-  title, onClick, icon, color, loading,
+  title, onClick, icon, color, loading, large,
 }: {
   title: string;
   onClick: () => void;
   icon: React.ReactNode;
   color: string;
   loading?: boolean;
+  /** Doubles the touch target on mobile cards to meet HIG. */
+  large?: boolean;
 }) {
   return (
     <button
@@ -291,7 +376,7 @@ function IconButton({
       title={title}
       aria-label={title}
       disabled={loading}
-      className={`p-1.5 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${color}`}
+      className={`${large ? 'p-2.5 rounded-lg' : 'p-1.5 rounded-md'} transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${color}`}
     >
       {loading ? <LoadingSpinner size="sm" /> : icon}
     </button>

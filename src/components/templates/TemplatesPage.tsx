@@ -38,7 +38,7 @@ export function TemplatesPage() {
           title="Edit Template"
           description={selected.display_name}
         />
-        <div className="p-8">
+        <div className="p-4 lg:p-8 max-w-5xl">
           <TemplateEditor
             template={selected}
             onBack={() => setSelected(null)}

@@ -9,7 +9,7 @@ export function SettingsPage() {
         title="Settings"
         description="Platform configuration and complexity levels"
       />
-      <div className="p-8 space-y-6 max-w-4xl">
+      <div className="p-4 lg:p-8 space-y-6 max-w-4xl">
         <ComplexitySettings />
         <UserDistributionChart />
       </div>

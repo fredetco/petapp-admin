@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Users, Search, CheckCircle2, Circle, RefreshCw, Pencil, Ban, Trash2, RotateCcw, Coins,
+  Users, Search, CheckCircle2, Circle, RefreshCw, Pencil, Ban, Trash2, RotateCcw, Coins, PawPrint,
 } from 'lucide-react';
 import { AdminHeader } from '../layout/AdminHeader';
 import { useAllUsers } from '../../hooks/useUsers';
@@ -62,7 +62,7 @@ export function UsersPage() {
         description={`${users.length} total${showDeleted ? ' (incl. deleted)' : ''} — click a row to see full profile`}
       />
 
-      <div className="p-8 space-y-4 max-w-7xl">
+      <div className="p-4 lg:p-8 space-y-4 max-w-7xl">
         {/* Filter bar */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative flex-1 min-w-[200px]">
@@ -105,7 +105,111 @@ export function UsersPage() {
             description={users.length === 0 ? 'Once people sign up they\'ll appear here.' : 'Try a different search term.'}
           />
         ) : (
-          <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+          <>
+            {/* Mobile-friendly card grid — shown below md breakpoint */}
+            <div className="md:hidden space-y-2">
+              {filtered.map((u) => {
+                const isDeleted = !!u.deletedAt;
+                const isSuspended = !!u.suspendedAt && !isDeleted;
+                return (
+                  <div
+                    key={u.id}
+                    onClick={() => navigate(`/users/${u.id}`)}
+                    className={`bg-white rounded-xl border border-neutral-200 p-4 cursor-pointer ${
+                      isDeleted ? 'opacity-60' : 'active:bg-primary-50/40'
+                    }`}
+                  >
+                    {/* Top row: name + status */}
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-neutral-800 truncate">
+                          {u.name || <span className="text-neutral-400 italic">unnamed</span>}
+                        </p>
+                        <p className="text-[11px] text-neutral-400 font-mono">{u.id.slice(0, 8)}…</p>
+                      </div>
+                      {isDeleted ? (
+                        <span className="px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-500 text-[10px] font-bold uppercase flex-shrink-0">Deleted</span>
+                      ) : isSuspended ? (
+                        <span className="px-2 py-0.5 rounded-full bg-red-50 text-red-700 text-[10px] font-bold uppercase flex-shrink-0">Suspended</span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full bg-green-50 text-green-700 text-[10px] font-bold uppercase flex-shrink-0">Active</span>
+                      )}
+                    </div>
+
+                    {/* Stats row: pets · AI · language · onboarded · joined */}
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-neutral-600 mb-3">
+                      <span className="inline-flex items-center gap-1">
+                        <PawPrint size={12} className="text-neutral-400" />
+                        <span className="font-semibold">{u.petCount}</span>
+                        <span className="text-neutral-400">pets</span>
+                      </span>
+                      <span className="inline-flex items-center gap-1" title="AI care plans this month">
+                        <Coins size={12} className="text-neutral-400" />
+                        <span className={`font-semibold ${u.aiTokensUsedThisMonth >= 5 ? 'text-amber-700' : ''}`}>
+                          {u.aiTokensUsedThisMonth}
+                        </span>
+                        {u.bonusAiTokens > 0 && <span className="text-primary-600 font-bold">+{u.bonusAiTokens}</span>}
+                      </span>
+                      <span className="uppercase">{u.language}</span>
+                      {u.onboardingComplete ? (
+                        <span className="inline-flex items-center gap-1 text-green-600" title="Onboarded">
+                          <CheckCircle2 size={12} />
+                          <span>onboarded</span>
+                        </span>
+                      ) : null}
+                      <span className="text-neutral-400">Joined {formatDate(u.createdAt)}</span>
+                    </div>
+
+                    {/* Actions row — stops row navigation */}
+                    <div onClick={(e) => e.stopPropagation()} className="flex items-center justify-end gap-1 pt-2 border-t border-neutral-100">
+                      {isDeleted ? (
+                        <IconButton
+                          title="Restore"
+                          onClick={() => restoreMutation.mutate(u.id)}
+                          loading={restoreMutation.isPending && restoreMutation.variables === u.id}
+                          icon={<RotateCcw size={16} />}
+                          color="text-primary-600 hover:bg-primary-50 active:bg-primary-100"
+                          large
+                        />
+                      ) : (
+                        <>
+                          <IconButton
+                            title="Edit"
+                            onClick={() => setEditTarget(u)}
+                            icon={<Pencil size={16} />}
+                            color="text-neutral-600 hover:bg-neutral-100 active:bg-neutral-200"
+                            large
+                          />
+                          <IconButton
+                            title={isSuspended ? 'Unsuspend' : 'Suspend'}
+                            onClick={() => suspendMutation.mutate({ id: u.id, suspend: !isSuspended })}
+                            loading={suspendMutation.isPending && suspendMutation.variables?.id === u.id}
+                            icon={<Ban size={16} />}
+                            color={isSuspended ? 'text-green-600 hover:bg-green-50 active:bg-green-100' : 'text-amber-600 hover:bg-amber-50 active:bg-amber-100'}
+                            large
+                          />
+                          <IconButton
+                            title="Delete"
+                            onClick={() => {
+                              if (window.confirm(`Delete ${u.name || 'this user'}? This is a soft delete — you can restore them later.`)) {
+                                deleteMutation.mutate(u.id);
+                              }
+                            }}
+                            loading={deleteMutation.isPending && deleteMutation.variables === u.id}
+                            icon={<Trash2 size={16} />}
+                            color="text-red-600 hover:bg-red-50 active:bg-red-100"
+                            large
+                          />
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop table — shown from md breakpoint up */}
+            <div className="hidden md:block bg-white rounded-xl border border-neutral-200 overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-neutral-50 text-neutral-500 text-xs uppercase tracking-wide">
                 <tr>
@@ -231,7 +335,8 @@ export function UsersPage() {
                 })}
               </tbody>
             </table>
-          </div>
+            </div>
+          </>
         )}
       </div>
 
@@ -245,13 +350,15 @@ export function UsersPage() {
 }
 
 function IconButton({
-  title, onClick, icon, color, loading,
+  title, onClick, icon, color, loading, large,
 }: {
   title: string;
   onClick: () => void;
   icon: React.ReactNode;
   color: string;
   loading?: boolean;
+  /** `large` doubles the touch target on mobile cards (≥44px Apple HIG target). */
+  large?: boolean;
 }) {
   return (
     <button
@@ -259,7 +366,7 @@ function IconButton({
       title={title}
       aria-label={title}
       disabled={loading}
-      className={`p-1.5 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${color}`}
+      className={`${large ? 'p-2.5 rounded-lg' : 'p-1.5 rounded-md'} transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${color}`}
     >
       {loading ? <LoadingSpinner size="sm" /> : icon}
     </button>

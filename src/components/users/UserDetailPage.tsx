@@ -28,7 +28,7 @@ export function UserDetailPage() {
     return (
       <div>
         <AdminHeader title="User profile" />
-        <div className="p-8 flex justify-center"><LoadingSpinner size="lg" /></div>
+        <div className="p-4 lg:p-8 flex justify-center"><LoadingSpinner size="lg" /></div>
       </div>
     );
   }
@@ -52,7 +52,7 @@ export function UserDetailPage() {
         description={user.id}
       />
 
-      <div className="p-8 space-y-6 max-w-5xl">
+      <div className="p-4 lg:p-8 space-y-6 max-w-5xl">
         <button
           onClick={() => navigate('/users')}
           className="inline-flex items-center gap-1 text-sm text-neutral-500 hover:text-neutral-700"
@@ -61,7 +61,7 @@ export function UserDetailPage() {
         </button>
 
         {/* Activity stat strip */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
           <StatCard label="Pets" value={user.petCount} icon={<PawPrint size={16} />} color="text-green-600" bg="bg-green-50" />
           <StatCard label="Tasks" value={user.taskCount} icon={<ListChecks size={16} />} color="text-blue-600" bg="bg-blue-50" />
           <StatCard label="Care logs" value={user.careLogCount} icon={<BookOpen size={16} />} color="text-amber-600" bg="bg-amber-50" />
@@ -71,7 +71,7 @@ export function UserDetailPage() {
         {/* Profile fields */}
         <div className="bg-white rounded-xl border border-neutral-200 p-6 space-y-4">
           <h2 className="text-base font-bold text-neutral-800">Profile</h2>
-          <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
             <Field icon={<Globe size={14} />} label="Language" value={user.language.toUpperCase()} />
             <Field icon={<Bell size={14} />} label="Reminder frequency" value={user.reminderFrequency} />
             <Field icon={<Clock size={14} />} label="Timezone" value={user.timezone} />

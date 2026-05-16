@@ -25,7 +25,7 @@ export function PromptList({ prompts, selectedId, onSelect, onNew }: PromptListP
   }
 
   return (
-    <div className="w-72 border-r border-admin-border bg-white flex flex-col h-full">
+    <div className="w-full md:w-72 border-r border-admin-border bg-white flex flex-col h-full">
       <div className="px-4 py-3 border-b border-admin-border flex items-center justify-between">
         <h3 className="font-bold text-sm text-neutral-800">Prompts</h3>
         <button
