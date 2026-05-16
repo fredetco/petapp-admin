@@ -76,7 +76,7 @@ export function AdminAuthPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
               className="w-full rounded-xl border-neutral-300 focus:border-admin-accent-500 focus:ring-admin-accent-500"
-              placeholder="admin@petapp.com"
+              placeholder="admin@myzoo.ai"
             />
           </div>
 

@@ -1,5 +1,5 @@
 -- =============================================================
--- PetApp Admin Dashboard — Database Schema
+-- MyZoo Admin Dashboard — Database Schema
 -- Run AFTER main app schema and portal schema
 -- =============================================================
 
