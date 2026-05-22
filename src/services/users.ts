@@ -25,6 +25,10 @@ export interface UserListEntry {
   aiTokensUsedThisMonth: number;
   bonusAiTokens: number;
   bonusChatMessages: number;
+  /** Timestamp the user accepted the beta-mode disclaimer. NULL = not accepted yet. */
+  betaDisclaimerAcceptedAt: string | null;
+  /** Version of the disclaimer accepted (e.g. "1.0-2026-05-22"). NULL when not accepted. */
+  betaDisclaimerVersion: string | null;
 }
 
 export interface UserDetail {
@@ -46,6 +50,10 @@ export interface UserDetail {
   deletedAt: string | null;
   bonusAiTokens: number;
   bonusChatMessages: number;
+  /** Timestamp the user accepted the beta-mode disclaimer. NULL = not accepted yet. */
+  betaDisclaimerAcceptedAt: string | null;
+  /** Version of the disclaimer accepted (e.g. "1.0-2026-05-22"). NULL when not accepted. */
+  betaDisclaimerVersion: string | null;
 }
 
 export interface UserPetSummary {
@@ -65,7 +73,7 @@ export interface UserPetSummary {
 export async function fetchAllUsers(opts: { includeDeleted?: boolean } = {}): Promise<UserListEntry[]> {
   let q = supabase
     .from('profiles')
-    .select('id, name, language, timezone, onboarding_complete, created_at, suspended_at, deleted_at, bonus_ai_tokens, bonus_chat_messages')
+    .select('id, name, language, timezone, onboarding_complete, created_at, suspended_at, deleted_at, bonus_ai_tokens, bonus_chat_messages, beta_disclaimer_accepted_at, beta_disclaimer_version')
     .order('created_at', { ascending: false });
   if (!opts.includeDeleted) q = q.is('deleted_at', null);
   const { data: profiles, error } = await withTimeout(q, ADMIN_QUERY_TIMEOUT_MS, 'Loading users');
@@ -121,6 +129,8 @@ export async function fetchAllUsers(opts: { includeDeleted?: boolean } = {}): Pr
     deleted_at: string | null;
     bonus_ai_tokens: number | null;
     bonus_chat_messages: number | null;
+    beta_disclaimer_accepted_at: string | null;
+    beta_disclaimer_version: string | null;
   }) => ({
     id: p.id,
     name: p.name,
@@ -134,6 +144,8 @@ export async function fetchAllUsers(opts: { includeDeleted?: boolean } = {}): Pr
     aiTokensUsedThisMonth: tokensByOwner.get(p.id) ?? 0,
     bonusAiTokens: p.bonus_ai_tokens ?? 0,
     bonusChatMessages: p.bonus_chat_messages ?? 0,
+    betaDisclaimerAcceptedAt: p.beta_disclaimer_accepted_at,
+    betaDisclaimerVersion: p.beta_disclaimer_version,
   }));
 }
 
@@ -185,6 +197,8 @@ export async function fetchUserDetail(userId: string): Promise<UserDetail | null
     deletedAt: profile.deleted_at ?? null,
     bonusAiTokens: profile.bonus_ai_tokens ?? 0,
     bonusChatMessages: profile.bonus_chat_messages ?? 0,
+    betaDisclaimerAcceptedAt: profile.beta_disclaimer_accepted_at ?? null,
+    betaDisclaimerVersion: profile.beta_disclaimer_version ?? null,
   };
 }
 

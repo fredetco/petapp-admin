@@ -1,5 +1,5 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, PawPrint, ListChecks, ClipboardList, BookOpen, Calendar, Globe, Bell, MapPin, Clock } from 'lucide-react';
+import { ArrowLeft, PawPrint, ListChecks, ClipboardList, BookOpen, Calendar, Globe, Bell, MapPin, Clock, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { AdminHeader } from '../layout/AdminHeader';
 import { useUserDetail, useUserPets } from '../../hooks/useUsers';
 import { LoadingSpinner } from '../shared/LoadingSpinner';
@@ -82,6 +82,47 @@ export function UserDetailPage() {
             <Field label="Notifications enabled" value={user.notificationsEnabled ? 'Yes' : 'No'} />
             <Field label="User ID" value={user.id} mono />
           </dl>
+        </div>
+
+        {/* Beta disclaimer acceptance */}
+        <div
+          className={`rounded-xl border p-6 ${
+            user.betaDisclaimerAcceptedAt
+              ? 'bg-emerald-50/50 border-emerald-200'
+              : 'bg-amber-50/50 border-amber-200'
+          }`}
+        >
+          <div className="flex items-start gap-3">
+            {user.betaDisclaimerAcceptedAt ? (
+              <ShieldCheck size={20} className="text-emerald-600 flex-shrink-0 mt-0.5" />
+            ) : (
+              <ShieldAlert size={20} className="text-amber-600 flex-shrink-0 mt-0.5" />
+            )}
+            <div className="flex-1">
+              <h2 className="text-base font-bold text-neutral-800 mb-1">
+                Beta disclaimer
+              </h2>
+              {user.betaDisclaimerAcceptedAt ? (
+                <>
+                  <p className="text-sm text-emerald-800 font-semibold">
+                    Accepted on {formatDateTime(user.betaDisclaimerAcceptedAt)}
+                  </p>
+                  <p className="text-xs text-emerald-700/80 mt-1">
+                    Version: <span className="font-mono">{user.betaDisclaimerVersion ?? '—'}</span>
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-amber-800 font-semibold">
+                    Not yet accepted
+                  </p>
+                  <p className="text-xs text-amber-700/80 mt-1">
+                    The modal will block the app on this user's next login until they accept.
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Pets owned */}

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Users, Search, CheckCircle2, Circle, RefreshCw, Pencil, Ban, Trash2, RotateCcw, Coins, PawPrint,
+  ShieldCheck, ShieldAlert,
 } from 'lucide-react';
 import { AdminHeader } from '../layout/AdminHeader';
 import { useAllUsers } from '../../hooks/useUsers';
@@ -157,6 +158,20 @@ export function UsersPage() {
                           <span>onboarded</span>
                         </span>
                       ) : null}
+                      {u.betaDisclaimerAcceptedAt ? (
+                        <span
+                          className="inline-flex items-center gap-1 text-emerald-600"
+                          title={`Disclaimer accepted ${formatDate(u.betaDisclaimerAcceptedAt)} · v${u.betaDisclaimerVersion ?? '?'}`}
+                        >
+                          <ShieldCheck size={12} />
+                          <span>disclaimer</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-amber-600" title="Disclaimer NOT yet accepted">
+                          <ShieldAlert size={12} />
+                          <span>no disclaimer</span>
+                        </span>
+                      )}
                       <span className="text-neutral-400">Joined {formatDate(u.createdAt)}</span>
                     </div>
 
@@ -223,6 +238,7 @@ export function UsersPage() {
                   </th>
                   <th className="text-left px-4 py-3 font-semibold">Language</th>
                   <th className="text-left px-4 py-3 font-semibold">Onboarded</th>
+                  <th className="text-left px-4 py-3 font-semibold">Disclaimer</th>
                   <th className="text-left px-4 py-3 font-semibold">Joined</th>
                   <th className="text-right px-4 py-3 font-semibold">Actions</th>
                 </tr>
@@ -284,6 +300,24 @@ export function UsersPage() {
                           <CheckCircle2 size={16} className="text-green-500" />
                         ) : (
                           <Circle size={16} className="text-neutral-300" />
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {u.betaDisclaimerAcceptedAt ? (
+                          <span
+                            className="inline-flex items-center gap-1 text-emerald-700"
+                            title={`Accepted ${new Date(u.betaDisclaimerAcceptedAt).toLocaleString()} — v${u.betaDisclaimerVersion ?? '?'}`}
+                          >
+                            <ShieldCheck size={16} />
+                            <span className="text-[11px] font-mono text-emerald-700/80">
+                              {formatDate(u.betaDisclaimerAcceptedAt)}
+                            </span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-amber-600" title="Disclaimer NOT yet accepted">
+                            <ShieldAlert size={16} />
+                            <span className="text-[11px]">not yet</span>
+                          </span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-neutral-600">{formatDate(u.createdAt)}</td>
