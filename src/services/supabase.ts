@@ -1,22 +1,10 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
-
-if (!isSupabaseConfigured) {
-  console.warn(
-    'Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env.local'
-  );
-}
-
-export const supabase = isSupabaseConfigured
-  ? createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: true,
-      },
-    })
-  : null!;
+/**
+ * MyZoo Admin data client.
+ *
+ * Historically this exported a supabase-js client; it now re-exports the
+ * self-hosted API shim (apiClient.ts) which speaks to our own PHP +
+ * PostgreSQL backend on PlanetHoster. Import paths across the admin app
+ * stay unchanged — the fluent query surface is identical.
+ */
+export { supabase, isSupabaseConfigured, API_URL } from './apiClient';
+export type { Session, User, ApiError } from './apiClient';

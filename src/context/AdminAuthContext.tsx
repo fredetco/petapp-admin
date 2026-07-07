@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
-import type { User } from '@supabase/supabase-js';
-import { supabase, isSupabaseConfigured } from '../services/supabase';
+import { supabase, isSupabaseConfigured, type User } from '../services/supabase';
 import {
   signInWithEmail as _signInWithEmail,
   signInWithGoogle as _signInWithGoogle,
