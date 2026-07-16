@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { isSupabaseConfigured } from '../../services/supabase';
 import { LogIn, Eye, EyeOff, Shield } from 'lucide-react';
@@ -11,6 +11,21 @@ export function AdminAuthPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Surface auth-flow failures the API reports via /auth?error=… —
+  // without this every OAuth/magic-link failure is silent.
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get('error');
+    if (!code) return;
+    const messages: Record<string, string> = {
+      oauth_state: 'Sign-in session expired — please try again.',
+      oauth_exchange: 'Google sign-in could not be completed (code exchange failed). Please try again.',
+      oauth_claims: 'Google did not return a usable account. Please try again.',
+      link_expired: 'This sign-in link has expired — request a new one.',
+    };
+    setError(messages[code] ?? `Sign-in failed (${code}). Please try again.`);
+    window.history.replaceState(null, '', window.location.pathname);
+  }, []);
 
   if (!isSupabaseConfigured) {
     return (
