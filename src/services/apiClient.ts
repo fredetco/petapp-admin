@@ -182,15 +182,16 @@ function detectSessionInUrl(): void {
   // Strip tokens from the URL before anything can log it.
   history.replaceState(null, '', window.location.pathname + window.location.search);
 
-  // We only have tokens — fetch the user, then persist + announce.
+  // We only have tokens — fetch the user, THEN persist + announce.
+  // Never emit SIGNED_IN with a user-less session: AuthContext consumers
+  // treat session.user as authoritative and would bounce to /auth.
   const provisional: Session = {
     access_token: access,
     refresh_token: refresh,
     expires_at: decodeJwtExp(access),
     user: null as unknown as User,
   };
-  currentSession = provisional;
-  pendingSignedInEvent = true;
+  currentSession = provisional; // lets apiFetch attach the token meanwhile
 
   void fetch(`${API_URL}/auth/user`, {
     headers: { Authorization: `Bearer ${access}` },
@@ -198,12 +199,11 @@ function detectSessionInUrl(): void {
     .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
     .then((body: { user: User }) => {
       persistSession({ ...provisional, user: body.user });
+      pendingSignedInEvent = true; // late subscribers still get SIGNED_IN
       emit('SIGNED_IN', currentSession);
-      pendingSignedInEvent = false;
     })
     .catch(() => {
       currentSession = null;
-      pendingSignedInEvent = false;
     });
 }
 
@@ -498,9 +498,16 @@ export const supabase = {
     ): { data: { subscription: { unsubscribe: () => void } } } {
       listeners.add(cb);
       // Mirror supabase-js: announce current state asynchronously on subscribe.
-      const initialEvent: AuthChangeEvent = pendingSignedInEvent ? 'SIGNED_IN' : 'INITIAL_SESSION';
       setTimeout(() => {
-        if (listeners.has(cb)) cb(initialEvent, currentSession);
+        if (!listeners.has(cb)) return;
+        // A session is only announced once it carries its user.
+        const session = currentSession?.user ? currentSession : null;
+        if (pendingSignedInEvent && session) {
+          pendingSignedInEvent = false;
+          cb('SIGNED_IN', session);
+        } else {
+          cb('INITIAL_SESSION', session);
+        }
       }, 0);
       return { data: { subscription: { unsubscribe: () => { listeners.delete(cb); } } } };
     },
